@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spotlike Admin — Inserção de Dados</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-glow"></div>
+        <i data-lucide="music-4" class="logo-icon"></i>
+        <h2>Spotlike <span>Admin</span></h2>
+      </div>
+      <nav class="sidebar-menu">
+        <a href="#" class="menu-item active" data-tab="genres">
+          <i data-lucide="tag"></i> Gêneros
+        </a>
+        <a href="#" class="menu-item" data-tab="artists">
+          <i data-lucide="user"></i> Artistas
+        </a>
+        <a href="#" class="menu-item" data-tab="bands">
+          <i data-lucide="users"></i> Bandas
+        </a>
+        <a href="#" class="menu-item" data-tab="albums">
+          <i data-lucide="disc"></i> Álbuns
+        </a>
+        <a href="#" class="menu-item" data-tab="playlists">
+          <i data-lucide="list-music"></i> Playlists
+        </a>
+        <a href="#" class="menu-item" data-tab="users">
+          <i data-lucide="user-check"></i> Usuários
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span>API Local Port 3001</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div class="header-title">
+          <h1 id="tab-title">Gerenciador de Gêneros</h1>
+          <p id="tab-subtitle">Cadastre e gerencie gêneros musicais do Spotlike</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="fetchCurrentTab()"><i data-lucide="refresh-cw"></i> Atualizar</button>
+        </div>
+      </header>
+
+      <!-- Alert Container -->
+      <div id="alert-box" class="alert-box hidden"></div>
+
+      <!-- Tab Content Area -->
+      <div class="content-body">
+        
+        <!-- ========================================== -->
+        <!-- TAB: GENRES -->
+        <!-- ========================================== -->
+        <section id="tab-genres" class="tab-section">
+          <div class="grid-layout">
+            <!-- Form Card -->
+            <div class="card glass">
+              <h3><i data-lucide="plus-circle"></i> Novo Gênero</h3>
+              <form id="form-genres" onsubmit="handleFormSubmit(event, 'genres')">
+                <div class="form-group">
+                  <label for="genre-name">Nome do Gênero <span class="required">*</span></label>
+                  <input type="text" id="genre-name" placeholder="Ex: Rock, Pop, Jazz..." required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Gênero</button>
+              </form>
+            </div>
+            <!-- List Card -->
+            <div class="card glass">
+              <h3><i data-lucide="table"></i> Gêneros Cadastrados</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nome</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="list-genres"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: ARTISTS -->
+        <!-- ========================================== -->
+        <section id="tab-artists" class="tab-section hidden">
+          <div class="grid-layout">
+            <div class="card glass">
+              <h3><i data-lucide="plus-circle"></i> Novo Artista</h3>
+              <form id="form-artists" onsubmit="handleFormSubmit(event, 'artists')">
+                <div class="form-group">
+                  <label for="artist-name">Nome do Artista <span class="required">*</span></label>
+                  <input type="text" id="artist-name" placeholder="Ex: Freddie Mercury" required>
+                </div>
+                <div class="form-group">
+                  <label for="artist-description">Descrição/Biografia</label>
+                  <textarea id="artist-description" rows="3" placeholder="Escreva um breve resumo da carreira..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="artist-image">Imagem do Perfil</label>
+                  <div class="upload-group">
+                    <input type="url" id="artist-image" placeholder="https://exemplo.com/perfil.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'artist-image')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-artist-image"></span>
+                </div>
+                <div class="form-group">
+                  <label for="artist-bg-image">Imagem de Fundo</label>
+                  <div class="upload-group">
+                    <input type="url" id="artist-bg-image" placeholder="https://exemplo.com/background.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'artist-bg-image')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-artist-bg-image"></span>
+                </div>
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Artista</button>
+              </form>
+            </div>
+            <div class="card glass">
+              <h3><i data-lucide="table"></i> Artistas Cadastrados</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Imagem</th>
+                      <th>Nome</th>
+                      <th>Descrição</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="list-artists"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: BANDS -->
+        <!-- ========================================== -->
+        <section id="tab-bands" class="tab-section hidden">
+          <div class="grid-layout">
+            <div class="card glass">
+              <h3><i data-lucide="plus-circle"></i> Nova Banda</h3>
+              <form id="form-bands" onsubmit="handleFormSubmit(event, 'bands')">
+                <div class="form-group">
+                  <label for="band-name">Nome da Banda <span class="required">*</span></label>
+                  <input type="text" id="band-name" placeholder="Ex: Queen" required>
+                </div>
+                <div class="form-group">
+                  <label for="band-description">Descrição</label>
+                  <textarea id="band-description" rows="3" placeholder="Biografia ou dados da banda..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="band-image">Imagem da Banda</label>
+                  <div class="upload-group">
+                    <input type="url" id="band-image" placeholder="https://exemplo.com/banda.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'band-image')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-band-image"></span>
+                </div>
+                <div class="form-group">
+                  <label for="band-bg-image">Imagem de Fundo da Banda</label>
+                  <div class="upload-group">
+                    <input type="url" id="band-bg-image" placeholder="https://exemplo.com/banda-bg.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'band-bg-image')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-band-bg-image"></span>
+                </div>
+                
+                <!-- Members Selection -->
+                <div class="form-group">
+                  <label>Membros da Banda (Selecione Artistas Cadastrados)</label>
+                  <div class="selection-container" id="band-members-list">
+                    <p class="empty-state-text">Carregando artistas...</p>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Banda</button>
+              </form>
+            </div>
+            <div class="card glass">
+              <h3><i data-lucide="table"></i> Bandas Cadastradas</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Imagem</th>
+                      <th>Banda</th>
+                      <th>Membros</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="list-bands"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: ALBUMS -->
+        <!-- ========================================== -->
+        <section id="tab-albums" class="tab-section hidden">
+          <div class="grid-layout full-width-layout">
+            <!-- Left Panel (Create) -->
+            <div class="card glass">
+              <h3><i data-lucide="plus-circle"></i> Novo Álbum</h3>
+              <form id="form-albums" onsubmit="handleFormSubmit(event, 'albums')">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="album-name">Nome do Álbum <span class="required">*</span></label>
+                    <input type="text" id="album-name" placeholder="Ex: A Night at the Opera" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="album-date">Data de Lançamento</label>
+                    <input type="date" id="album-date">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="album-cover">Imagem de Capa do Álbum</label>
+                  <div class="upload-group">
+                    <input type="url" id="album-cover" placeholder="https://exemplo.com/capa.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'album-cover')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-album-cover"></span>
+                </div>
+
+                <!-- Credits Selection -->
+                <div class="form-group">
+                  <label>Crédito do Álbum (Selecione Artista ou Banda) <span class="required">*</span></label>
+                  <div class="credit-flex">
+                    <select id="album-credit-type" onchange="toggleCreditOptions()" required>
+                      <option value="artist">Artista Solo</option>
+                      <option value="band">Banda</option>
+                    </select>
+                    <select id="album-credit-ref" required>
+                      <option value="">Carregando opções...</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Album Tracks Builder -->
+                <div class="form-group">
+                  <div class="flex-header">
+                    <label>Músicas do Álbum (Tracks) <span class="required">*</span></label>
+                    <button type="button" class="btn btn-sm btn-accent" onclick="addTrackRow()"><i data-lucide="plus"></i> Add Música</button>
+                  </div>
+                  <div class="tracks-builder" id="tracks-builder-container">
+                    <!-- Dynamic track rows go here -->
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Álbum completo</button>
+              </form>
+            </div>
+
+            <!-- Right Panel (List) -->
+            <div class="card glass">
+              <h3><i data-lucide="table"></i> Álbuns Cadastrados</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Capa</th>
+                      <th>Álbum</th>
+                      <th>Lançamento</th>
+                      <th>Crédito</th>
+                      <th>Músicas (Qtd)</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="list-albums"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: PLAYLISTS -->
+        <!-- ========================================== -->
+        <section id="tab-playlists" class="tab-section hidden">
+          <div class="grid-layout">
+            <div class="card glass">
+              <h3><i data-lucide="plus-circle"></i> Nova Playlist</h3>
+              <form id="form-playlists" onsubmit="handleFormSubmit(event, 'playlists')">
+                <div class="form-group">
+                  <label for="playlist-name">Nome da Playlist <span class="required">*</span></label>
+                  <input type="text" id="playlist-name" placeholder="Ex: Favoritas do Rock" required>
+                </div>
+                <div class="form-group">
+                  <label for="playlist-description">Descrição</label>
+                  <textarea id="playlist-description" rows="2" placeholder="Uma breve descrição da playlist..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="playlist-image">Imagem de Capa da Playlist</label>
+                  <div class="upload-group">
+                    <input type="url" id="playlist-image" placeholder="https://exemplo.com/playlist.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'playlist-image')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-playlist-image"></span>
+                </div>
+
+                <div class="form-row">
+                  <!-- Owner Selection -->
+                  <div class="form-group">
+                    <label for="playlist-owner">Criador / Dono (User) <span class="required">*</span></label>
+                    <select id="playlist-owner" required>
+                      <option value="">Carregando usuários...</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Followers Selection -->
+                <div class="form-group">
+                  <label>Seguidores (Selecione Usuários)</label>
+                  <div class="selection-container" id="playlist-followers-list">
+                    <p class="empty-state-text">Carregando usuários...</p>
+                  </div>
+                </div>
+
+                <!-- Playlist Tracks Selection -->
+                <div class="form-group">
+                  <div class="flex-header">
+                    <label>Adicionar Músicas de Álbuns Cadastrados</label>
+                    <button type="button" class="btn btn-sm btn-accent" onclick="addPlaylistTrackRow()"><i data-lucide="plus"></i> Add Faixa</button>
+                  </div>
+                  <div class="tracks-builder" id="playlist-tracks-container">
+                    <!-- Dynamic playlist track rows -->
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Playlist</button>
+              </form>
+            </div>
+            <div class="card glass">
+              <h3><i data-lucide="table"></i> Playlists Cadastradas</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Capa</th>
+                      <th>Playlist</th>
+                      <th>Criador</th>
+                      <th>Músicas (Qtd)</th>
+                      <th>Seguidores</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="list-playlists"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB: USERS -->
+        <!-- ========================================== -->
+        <section id="tab-users" class="tab-section hidden">
+          <div class="grid-layout">
+            <div class="card glass">
+              <h3><i data-lucide="plus-circle"></i> Novo Usuário</h3>
+              <form id="form-users" onsubmit="handleFormSubmit(event, 'users')">
+                <div class="form-group">
+                  <label for="user-name">Nome do Usuário <span class="required">*</span></label>
+                  <input type="text" id="user-name" placeholder="Ex: Karl Liebknecht" required>
+                </div>
+                <div class="form-group">
+                  <label for="user-email">E-mail</label>
+                  <input type="email" id="user-email" placeholder="karl@email.com">
+                </div>
+                <div class="form-group">
+                  <label for="user-password">Senha de Acesso <span class="required">*</span></label>
+                  <input type="password" id="user-password" placeholder="Digite uma senha forte" required>
+                </div>
+                <div class="form-group">
+                  <label for="user-picture">Foto de Perfil</label>
+                  <div class="upload-group">
+                    <input type="url" id="user-picture" placeholder="https://exemplo.com/foto.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'user-picture')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-user-picture"></span>
+                </div>
+                <div class="form-group">
+                  <label for="user-bg">Foto de Capa</label>
+                  <div class="upload-group">
+                    <input type="url" id="user-bg" placeholder="https://exemplo.com/capa-perfil.jpg">
+                    <label class="btn-upload" title="Fazer upload de arquivo">
+                      <i data-lucide="upload"></i>
+                      <input type="file" accept="image/*" onchange="uploadAndFill(this, 'user-bg')">
+                    </label>
+                  </div>
+                  <span class="upload-status" id="status-user-bg"></span>
+                </div>
+                <div class="form-group">
+                  <label for="user-description">Descrição / Biografia</label>
+                  <textarea id="user-description" rows="2" placeholder="Sobre mim..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Usuário</button>
+              </form>
+            </div>
+            <div class="card glass">
+              <h3><i data-lucide="table"></i> Usuários Cadastrados</h3>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Foto</th>
+                      <th>Nome</th>
+                      <th>E-mail</th>
+                      <th>Descrição</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="list-users"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

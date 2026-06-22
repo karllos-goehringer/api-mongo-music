@@ -7,6 +7,7 @@ import albumRoutes from './routes/album.routes';
 import playlistRoutes from './routes/playlist.routes';
 import userRoutes from './routes/user.routes';
 import uploadRoutes from './routes/upload.routes';
+import pipelineRoutes from './routes/pipeline.routes';
 
 const app: Application = express();
 
@@ -40,6 +41,7 @@ app.use('/api/albums', albumRoutes);
 app.use('/api/playlists', playlistRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/pipelines', pipelineRoutes);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);

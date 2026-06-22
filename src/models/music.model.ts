@@ -42,7 +42,7 @@ const MusicSchema = new Schema<IMusic>(
     },
   },
   {
-    timestamps: true, // Gerencia automaticamente createdAt e updatedAt
+    timestamps: true, 
   }
 );
 

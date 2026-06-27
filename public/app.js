@@ -335,7 +335,7 @@ function addTrackRow() {
   row.innerHTML = `
     <div class="track-num-label">#${trackId}</div>
     <input type="text" class="track-title" placeholder="Nome da Música" required>
-    <input type="text" class="track-duration" placeholder="Duração (ex: 3:45)">
+    <input type="hidden" class="track-duration">
     <select class="track-genre" required>${genresOptions}</select>
     <div class="track-song-upload">
       <input type="hidden" class="track-song-path">
@@ -355,9 +355,30 @@ async function uploadTrackSong(input, trackId) {
   const statusEl = document.getElementById(`track-song-status-${trackId}`);
   const row = document.getElementById(`album-track-row-${trackId}`);
   const hiddenInput = row ? row.querySelector('.track-song-path') : null;
+  const durationInput = row ? row.querySelector('.track-duration') : null;
   const label = input.closest('.btn-upload');
 
   if (!input.files || input.files.length === 0) return;
+
+  const file = input.files[0];
+
+  // --- Pegar a duração automaticamente ---
+  const audio = new Audio();
+  audio.src = URL.createObjectURL(file);
+  audio.addEventListener('loadedmetadata', () => {
+    const durationSeconds = audio.duration;
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = Math.floor(durationSeconds % 60);
+    const durationFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Preenche o campo de duração
+    if (durationInput && !durationInput.value) {
+      durationInput.value = durationFormatted;
+    }
+    
+    URL.revokeObjectURL(audio.src);
+  });
+  // ----------------------------------------
 
   statusEl.textContent = '⏳ Enviando...';
   statusEl.style.color = 'var(--color-primary-hover)';

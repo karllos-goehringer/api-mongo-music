@@ -1,21 +1,6 @@
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 
-const storage = multer.diskStorage({
-  destination: (_req, file, cb) => {
-    const isAudio = file.mimetype.startsWith('audio/') || file.originalname.endsWith('.mp3') || file.originalname.endsWith('.wav');
-    const subfolder = isAudio ? 'songs' : 'images';
-    const folderPath = path.join(__dirname, `../../public/uploads/${subfolder}`);
-    fs.mkdirSync(folderPath, { recursive: true });
-    cb(null, folderPath);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const extension = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${extension}`);
-  }
-});
+const storage = multer.memoryStorage();
 
 // Filtro de segurança básico
 const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {

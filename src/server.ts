@@ -12,6 +12,7 @@ const startServer = async () => {
   app.listen(PORT, () => {
     console.log(`[Server]: Servidor rodando com sucesso na porta ${PORT}`);
     console.log(`[Server]: Acesse http://localhost:${PORT}/health para verificar o status`);
+    console.log(`[Server]: Acesse http://localhost:3001 para acessar a interface de dados.`)
   });
 };
 

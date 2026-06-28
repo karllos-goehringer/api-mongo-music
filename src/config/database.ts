@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/mongomusic';
+    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/'+process.env.DBNAME;
     mongoose.set('strictQuery', true);
 
     await mongoose.connect(uri);

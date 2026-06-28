@@ -51,7 +51,21 @@ https://api-mongo-music.onrender.com/
 git clone https://github.com/karllos-goehringer/API-Mongo-Music.git
 cd API-Mongo-Music
 ```
+## ATENÇÃO
 
+```bash
+Para popular o banco de dados se atente a pasta dados_para_seed que é nela onde estão os arquivos para o seed do banco.
+Caso você queira adicionar as novas músicas/albuns/artistas veja a arquitetura da pasta e insira no mesmo padrão, que será usado também no seed.
+    Exemplo:
+      <ironMaiden> //pasta
+          perfil.img
+          fundo.img
+          <Powerslave> //pasta
+            capa.img
+            musicas.mp3...
+          </Powerslave>
+      </ironMaiden>
+```
 ## Instale as dependências
 
 ```bash

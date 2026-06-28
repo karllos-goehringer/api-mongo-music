@@ -6,37 +6,53 @@ import { GridFSBucket, ObjectId } from 'mongodb';
 
 export class UploadController {
     async upload(req: Request, res: Response): Promise<void> {
-        return upload.single('file')(req, res, (err:any) => {
-            if (err) {
-              return res.status(400).json({ message: err.message || 'Erro ao realizar o upload.' });
-            }
-            if (!req.file) {
-              return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
-            }
-        
-            const db = mongoose.connection.db;
-            if (!db) {
-              return res.status(500).json({ message: 'Banco de dados não conectado.' });
-            }
-        
-            const bucket = new GridFSBucket(db, { bucketName: 'uploads' });
-            const uploadStream = bucket.openUploadStream(req.file.originalname, {
-              contentType: req.file.mimetype,
+    try {
+        await new Promise<void>((resolve, reject) => {
+            upload.single('file')(req, res, (err: any) => {
+                if (err) return reject(err);
+                resolve();
             });
-        
-            uploadStream.end(req.file.buffer);
-        
+        });
+
+        if (!req.file) {
+            res.status(400).json({ message: 'Nenhum arquivo enviado.' });
+            return;
+        }
+
+        const db = mongoose.connection.db;
+        if (!db) {
+            res.status(500).json({ message: 'Banco de dados não conectado.' });
+            return;
+        }
+
+        const bucket = new GridFSBucket(db, { bucketName: 'uploads' });
+        const uploadStream = bucket.openUploadStream(req.file.originalname, {
+            contentType: req.file.mimetype,
+        });
+
+        uploadStream.end(req.file.buffer);
+        await new Promise<void>((resolve, reject) => {
             uploadStream.on('finish', () => {
-              const relativeUrl = `/api/upload/${uploadStream.id}`;
-              const absoluteUrl = `${req.protocol}://${req.get('host')}${relativeUrl}`;
-              return res.status(200).json({ url: absoluteUrl, path: relativeUrl });
+                const relativeUrl = `/api/upload/${uploadStream.id}`;
+                const absoluteUrl = `${req.protocol}://${req.get('host')}${relativeUrl}`;
+                res.status(200).json({ url: absoluteUrl, path: relativeUrl });
+                resolve();
             });
-        
+
             uploadStream.on('error', (error) => {
-              return res.status(500).json({ message: 'Erro ao salvar o arquivo no GridFS.', error });
+                reject(error);
             });
-        })
+        });
+
+    } catch (err: any) {
+        if (!res.headersSent) {
+            res.status(500).json({ 
+                message: err.message || 'Erro ao processar upload.', 
+                error: err 
+            });
+        }
     }
+}
     async delete(req: Request, res: Response):Promise<void>{
         try {
             const db = mongoose.connection.db;

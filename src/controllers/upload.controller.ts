@@ -6,7 +6,7 @@ import { GridFSBucket, ObjectId } from 'mongodb';
 
 export class UploadController {
     async upload(req: Request, res: Response): Promise<void> {
-        upload.single('file')(req, res, (err:any) => {
+        return upload.single('file')(req, res, (err:any) => {
             if (err) {
               return res.status(400).json({ message: err.message || 'Erro ao realizar o upload.' });
             }

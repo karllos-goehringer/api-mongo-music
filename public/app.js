@@ -6,11 +6,20 @@ let cachedGenres = [];
 let cachedAlbums = [];
 let cachedUsers = [];
 
+// Estado de edição por entidade
+const editingState = {
+  genres: null,
+  artists: null,
+  bands: null,
+  albums: null,
+  playlists: null,
+  users: null,
+};
+
 const API_ORIGIN = (() => {
   if (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3001')) {
     return 'http://localhost:3001';
   }
-
   return window.location.origin;
 })();
 
@@ -28,8 +37,6 @@ function publicUrl(path) {
 document.addEventListener('DOMContentLoaded', () => {
   setupNavigation();
   fetchCurrentTab();
-  
-  // Lucide Icons Render
   lucide.createIcons();
 });
 
@@ -39,21 +46,12 @@ function setupNavigation() {
   menuItems.forEach(item => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
-      
       menuItems.forEach(i => i.classList.remove('active'));
       item.classList.add('active');
-      
-      // Esconde todas as seções
       document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
-      
-      // Mostra a seção ativa
       currentTab = item.getAttribute('data-tab');
       document.getElementById(`tab-${currentTab}`).classList.remove('hidden');
-      
-      // Atualiza o título e subtítulo da página
       updateHeaderTexts();
-      
-      // Busca os dados da aba ativa
       fetchCurrentTab();
     });
   });
@@ -62,7 +60,6 @@ function setupNavigation() {
 function updateHeaderTexts() {
   const title = document.getElementById('tab-title');
   const subtitle = document.getElementById('tab-subtitle');
-  
   switch(currentTab) {
     case 'genres':
       title.innerText = 'Gerenciador de Gêneros';
@@ -94,7 +91,6 @@ function updateHeaderTexts() {
 // 2. Fetch de Dados conforme a Aba ativa
 async function fetchCurrentTab() {
   showAlert('Carregando dados...', 'success', 1000);
-  
   try {
     switch(currentTab) {
       case 'genres':
@@ -104,17 +100,14 @@ async function fetchCurrentTab() {
         await loadArtists();
         break;
       case 'bands':
-        // Carrega artistas primeiro, pois precisamos deles para vincular membros no formulário
         await loadArtists();
         await loadBands();
         break;
       case 'albums':
-        // Precisamos carregar artistas, bandas e gêneros antes para montar o form
         await loadArtists();
         await loadBands();
         await loadGenres();
         await loadAlbums();
-        // Inicializa o formulário de álbum com uma linha de música vazia
         resetAlbumTracksBuilder();
         break;
       case 'playlists':
@@ -135,29 +128,136 @@ async function fetchCurrentTab() {
 }
 
 // ==========================================
+// EDIT STATE HELPERS
+// ==========================================
+
+/**
+ * Entra no modo de edição para uma entidade.
+ * Atualiza o título do card, o texto do botão submit e exibe o botão cancelar.
+ */
+function enterEditMode(entity, id) {
+  editingState[entity] = id;
+
+  const form = document.getElementById(`form-${entity}`);
+  if (!form) return;
+
+  // Adiciona classe visual ao form card
+  const card = form.closest('.card');
+  if (card) card.classList.add('editing-mode');
+
+  // Atualiza o título do card de formulário
+  const cardTitle = card ? card.querySelector('h3') : null;
+  if (cardTitle) {
+    const iconHtml = cardTitle.querySelector('i') ? cardTitle.querySelector('i').outerHTML : '';
+    cardTitle.innerHTML = `${iconHtml} Editando Registro`;
+  }
+
+  // Atualiza o botão de submit
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.innerHTML = '<i data-lucide="check-circle"></i> Salvar Alterações';
+    submitBtn.classList.remove('btn-primary');
+    submitBtn.classList.add('btn-edit-save');
+  }
+
+  // Exibe o botão de cancelar
+  const cancelBtn = document.getElementById(`cancel-edit-${entity}`);
+  if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+  lucide.createIcons();
+}
+
+/**
+ * Sai do modo de edição e restaura o formulário ao estado inicial.
+ */
+function cancelEdit(entity) {
+  editingState[entity] = null;
+
+  const form = document.getElementById(`form-${entity}`);
+  if (!form) return;
+
+  form.reset();
+
+  // Se for o form de bandas, limpa explicitamente a seleção de membros
+  if (entity === 'bands') {
+    renderBandMembersSelection();
+  }
+
+  // Remove classe visual
+  const card = form.closest('.card');
+  if (card) card.classList.remove('editing-mode');
+
+  // Restaura título do card
+  const cardTitle = card ? card.querySelector('h3') : null;
+  if (cardTitle) {
+    const labels = {
+      genres: '<i data-lucide="plus-circle"></i> Novo Gênero',
+      artists: '<i data-lucide="plus-circle"></i> Novo Artista',
+      bands: '<i data-lucide="plus-circle"></i> Nova Banda',
+      albums: '<i data-lucide="plus-circle"></i> Novo Álbum',
+      playlists: '<i data-lucide="plus-circle"></i> Nova Playlist',
+      users: '<i data-lucide="plus-circle"></i> Novo Usuário',
+    };
+    cardTitle.innerHTML = labels[entity] || '<i data-lucide="plus-circle"></i> Novo Registro';
+  }
+
+  // Restaura o botão de submit
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    const labels = {
+      genres: '<i data-lucide="save"></i> Salvar Gênero',
+      artists: '<i data-lucide="save"></i> Salvar Artista',
+      bands: '<i data-lucide="save"></i> Salvar Banda',
+      albums: '<i data-lucide="save"></i> Salvar Álbum completo',
+      playlists: '<i data-lucide="save"></i> Salvar Playlist',
+      users: '<i data-lucide="save"></i> Salvar Usuário',
+    };
+    submitBtn.innerHTML = labels[entity] || '<i data-lucide="save"></i> Salvar';
+    submitBtn.classList.add('btn-primary');
+    submitBtn.classList.remove('btn-edit-save');
+  }
+
+  // Esconde o botão de cancelar
+  const cancelBtn = document.getElementById(`cancel-edit-${entity}`);
+  if (cancelBtn) cancelBtn.classList.add('hidden');
+
+  // Limpa upload statuses
+  document.querySelectorAll('.upload-status').forEach(el => el.textContent = '');
+
+  // Reset especial para albums
+  if (entity === 'albums') resetAlbumTracksBuilder();
+  if (entity === 'playlists') resetPlaylistTracksBuilder();
+
+  lucide.createIcons();
+}
+
+// ==========================================
 // LOADERS & RENDERS
 // ==========================================
 
 async function loadGenres() {
   const res = await fetch(apiUrl('/api/genres'));
   cachedGenres = await res.json();
-  
+
   const tbody = document.getElementById('list-genres');
   tbody.innerHTML = '';
-  
+
   if (cachedGenres.length === 0) {
     tbody.innerHTML = '<tr><td colspan="3" class="empty-state-text">Nenhum gênero cadastrado</td></tr>';
     return;
   }
-  
+
   cachedGenres.forEach(genre => {
     tbody.innerHTML += `
       <tr>
         <td><code>${genre._id}</code></td>
         <td><strong>${genre.name}</strong></td>
-        <td>
+        <td class="actions-cell">
+          <button class="btn-edit" onclick="editGenre('${genre._id}')">
+            <i data-lucide="pencil"></i>
+          </button>
           <button class="btn-danger" onclick="deleteItem('genres', '${genre._id}')">
-            <i data-lucide="trash-2"></i> Excluir
+            <i data-lucide="trash-2"></i>
           </button>
         </td>
       </tr>
@@ -165,13 +265,21 @@ async function loadGenres() {
   });
 }
 
+function editGenre(id) {
+  const genre = cachedGenres.find(g => g._id === id);
+  if (!genre) return;
+  document.getElementById('genre-name').value = genre.name || '';
+  enterEditMode('genres', id);
+  document.getElementById('form-genres').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadArtists() {
   const res = await fetch(apiUrl('/api/artists'));
   cachedArtists = await res.json();
-  
+
   const tbody = document.getElementById('list-artists');
   tbody.innerHTML = '';
-  
+
   if (cachedArtists.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="empty-state-text">Nenhum artista cadastrado</td></tr>';
   } else {
@@ -179,10 +287,13 @@ async function loadArtists() {
       const img = artist.imageUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&fit=crop';
       tbody.innerHTML += `
         <tr>
-          <td><img src="${img}" class="table-img" alt="${artist.name}"></td>
+          <td><img src="${publicUrl(img)}" class="table-img" alt="${artist.name}"></td>
           <td><strong>${artist.name}</strong></td>
           <td>${artist.description || '<span class="empty-state-text">Sem bio</span>'}</td>
-          <td>
+          <td class="actions-cell">
+            <button class="btn-edit" onclick="editArtist('${artist._id}')">
+              <i data-lucide="pencil"></i>
+            </button>
             <button class="btn-danger" onclick="deleteItem('artists', '${artist._id}')">
               <i data-lucide="trash-2"></i>
             </button>
@@ -191,23 +302,47 @@ async function loadArtists() {
       `;
     });
   }
-  
-  // Atualiza também a lista de membros no form de bandas
-  renderBandMembersSelection();
+
+  // Se houver uma banda em edição, preserva os membros já selecionados ao re-renderizar a lista
+  if (editingState.bands) {
+    const editingBand = cachedBands.find(b => b._id === editingState.bands);
+    renderBandMembersSelection(getBandMemberIds(editingBand));
+  } else {
+    renderBandMembersSelection();
+  }
 }
 
-function renderBandMembersSelection() {
+function editArtist(id) {
+  const artist = cachedArtists.find(a => a._id === id);
+  if (!artist) return;
+  document.getElementById('artist-name').value = artist.name || '';
+  document.getElementById('artist-description').value = artist.description || '';
+  document.getElementById('artist-image').value = publicUrl(artist.imageUrl) || '';
+  document.getElementById('artist-bg-image').value = publicUrl(artist.backgroundImageUrl) || '';
+  enterEditMode('artists', id);
+  document.getElementById('form-artists').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function getBandMemberIds(band) {
+  return (band?.members || []).map(m => {
+    const raw = m.artistId && m.artistId._id ? m.artistId._id : (m.artistId || m._id);
+    return String(raw);
+  });
+}
+
+function renderBandMembersSelection(selectedIds = []) {
   const container = document.getElementById('band-members-list');
   if (!container) return;
-  
+
   if (cachedArtists.length === 0) {
     container.innerHTML = '<p class="empty-state-text">Cadastre artistas primeiro</p>';
     return;
   }
-  
+
   container.innerHTML = cachedArtists.map(artist => `
     <label class="selection-item">
-      <input type="checkbox" name="band-member-checkbox" value="${artist._id}" data-name="${artist.name}">
+      <input type="checkbox" name="band-member-checkbox" value="${artist._id}" data-name="${artist.name}"
+        ${selectedIds.includes(String(artist._id)) ? 'checked' : ''}>
       <span>${artist.name}</span>
     </label>
   `).join('');
@@ -216,24 +351,27 @@ function renderBandMembersSelection() {
 async function loadBands() {
   const res = await fetch(apiUrl('/api/bands'));
   cachedBands = await res.json();
-  
+
   const tbody = document.getElementById('list-bands');
   tbody.innerHTML = '';
-  
+
   if (cachedBands.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="empty-state-text">Nenhuma banda cadastrada</td></tr>';
     return;
   }
-  
+
   cachedBands.forEach(band => {
     const img = band.imageUrl || 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&fit=crop';
     const membersList = band.members.map(m => m.name).join(', ') || '<span class="empty-state-text">Sem membros</span>';
     tbody.innerHTML += `
       <tr>
-        <td><img src="${img}" class="table-img" alt="${band.name}"></td>
+        <td><img src="${publicUrl(img)}" class="table-img" alt="${band.name}"></td>
         <td><strong>${band.name}</strong></td>
         <td>${membersList}</td>
-        <td>
+        <td class="actions-cell">
+          <button class="btn-edit" onclick="editBand('${band._id}')">
+            <i data-lucide="pencil"></i>
+          </button>
           <button class="btn-danger" onclick="deleteItem('bands', '${band._id}')">
             <i data-lucide="trash-2"></i>
           </button>
@@ -243,35 +381,51 @@ async function loadBands() {
   });
 }
 
+function editBand(id) {
+  const band = cachedBands.find(b => b._id === id);
+  if (!band) return;
+  document.getElementById('band-name').value = band.name || '';
+  document.getElementById('band-description').value = band.description || '';
+  document.getElementById('band-image').value = publicUrl(band.imageUrl) || '';
+  document.getElementById('band-bg-image').value = publicUrl(band.backgroundImageUrl) || '';
+
+  // Seleciona os membros existentes (artistId pode vir como string ou como objeto populado)
+  renderBandMembersSelection(getBandMemberIds(band));
+
+  enterEditMode('bands', id);
+  document.getElementById('form-bands').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadAlbums() {
   const res = await fetch(apiUrl('/api/albums'));
   cachedAlbums = await res.json();
-  
-  // Atualiza lista do formulário de créditos
   toggleCreditOptions();
-  
+
   const tbody = document.getElementById('list-albums');
   tbody.innerHTML = '';
-  
+
   if (cachedAlbums.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" class="empty-state-text">Nenhum álbum cadastrado</td></tr>';
     return;
   }
-  
+
   cachedAlbums.forEach(album => {
     const img = album.coverImageUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=100&fit=crop';
     const creditStr = album.credits.map(c => `${c.name} (${c.type === 'band' ? 'Banda' : 'Solo'})`).join(', ') || 'N/A';
     const tracksCount = album.tracks.length;
     const release = album.releaseDate ? new Date(album.releaseDate).toLocaleDateString('pt-BR') : 'N/A';
-    
+
     tbody.innerHTML += `
       <tr>
-        <td><img src="${img}" class="table-img square" alt="${album.name}"></td>
+        <td><img src="${publicUrl(img)}" class="table-img square" alt="${album.name}"></td>
         <td><strong>${album.name}</strong></td>
         <td>${release}</td>
         <td><code>${creditStr}</code></td>
         <td>${tracksCount} faixas</td>
-        <td>
+        <td class="actions-cell">
+          <button class="btn-edit" onclick="editAlbum('${album._id}')">
+            <i data-lucide="pencil"></i>
+          </button>
           <button class="btn-danger" onclick="deleteItem('albums', '${album._id}')">
             <i data-lucide="trash-2"></i>
           </button>
@@ -281,14 +435,80 @@ async function loadAlbums() {
   });
 }
 
+function editAlbum(id) {
+  const album = cachedAlbums.find(a => a._id === id);
+  if (!album) return;
+
+  document.getElementById('album-name').value = album.name || '';
+  document.getElementById('album-date').value = album.releaseDate
+    ? new Date(album.releaseDate).toISOString().split('T')[0]
+    : '';
+  document.getElementById('album-cover').value = publicUrl(album.coverImageUrl) || '';
+
+  // Crédito
+  if (album.credits && album.credits.length > 0) {
+    const credit = album.credits[0];
+    const typeSelect = document.getElementById('album-credit-type');
+    typeSelect.value = credit.type || 'artist';
+    toggleCreditOptions();
+    setTimeout(() => {
+      const refSelect = document.getElementById('album-credit-ref');
+      refSelect.value = credit.refId || '';
+    }, 50);
+  }
+
+  // Reconstrói o tracks builder com as músicas existentes
+  const container = document.getElementById('tracks-builder-container');
+  container.innerHTML = '';
+  albumTrackCount = 0;
+
+  if (album.tracks && album.tracks.length > 0) {
+    album.tracks.forEach(track => {
+      albumTrackCount++;
+      const trackId = albumTrackCount;
+      const row = document.createElement('div');
+      row.className = 'track-row';
+      row.id = `album-track-row-${trackId}`;
+
+      let genresOptions = cachedGenres.map(g =>
+        `<option value="${g._id}" ${String(g._id) === String(track.genreId?._id || track.genreId) ? 'selected' : ''}>${g.name}</option>`
+      ).join('');
+      if (genresOptions === '') genresOptions = '<option value="">Cadastre gêneros antes</option>';
+
+      row.innerHTML = `
+        <div class="track-num-label">#${trackId}</div>
+        <input type="text" class="track-title" placeholder="Nome da Música" value="${track.title || ''}" required>
+        <input type="hidden" class="track-duration" value="${track.duration || ''}">
+        <select class="track-genre" required>${genresOptions}</select>
+        <div class="track-song-upload">
+          <input type="hidden" class="track-song-path" value="${publicUrl(track.songPath) || ''}">
+          <label class="btn-upload track-upload-btn" title="Upload do arquivo de áudio">
+            <i data-lucide="music"></i>
+            <input type="file" accept="audio/*,.mp3,.wav,.flac" onchange="uploadTrackSong(this, ${trackId})">
+          </label>
+          <span class="track-upload-indicator" id="track-song-status-${trackId}">${track.songPath ? '✓ Áudio' : ''}</span>
+        </div>
+        <button type="button" class="btn-danger btn-sm" onclick="removeTrackRow(${trackId})"><i data-lucide="x"></i></button>
+      `;
+      container.appendChild(row);
+    });
+  } else {
+    addTrackRow();
+  }
+
+  enterEditMode('albums', id);
+  document.getElementById('form-albums').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  lucide.createIcons();
+}
+
 function toggleCreditOptions() {
   const typeSelect = document.getElementById('album-credit-type');
   const refSelect = document.getElementById('album-credit-ref');
   if (!typeSelect || !refSelect) return;
-  
+
   const type = typeSelect.value;
   refSelect.innerHTML = '';
-  
+
   if (type === 'artist') {
     if (cachedArtists.length === 0) {
       refSelect.innerHTML = '<option value="">Cadastre um artista antes</option>';
@@ -315,7 +535,7 @@ function resetAlbumTracksBuilder() {
   if (!container) return;
   container.innerHTML = '';
   albumTrackCount = 0;
-  addTrackRow(); // Inicia com uma linha de música padrão
+  addTrackRow();
 }
 
 function addTrackRow() {
@@ -328,9 +548,7 @@ function addTrackRow() {
   row.id = `album-track-row-${trackId}`;
 
   let genresOptions = cachedGenres.map(g => `<option value="${g._id}">${g.name}</option>`).join('');
-  if (genresOptions === '') {
-    genresOptions = '<option value="">Cadastre gêneros antes</option>';
-  }
+  if (genresOptions === '') genresOptions = '<option value="">Cadastre gêneros antes</option>';
 
   row.innerHTML = `
     <div class="track-num-label">#${trackId}</div>
@@ -362,7 +580,6 @@ async function uploadTrackSong(input, trackId) {
 
   const file = input.files[0];
 
-  // --- Pegar a duração automaticamente ---
   const audio = new Audio();
   audio.src = URL.createObjectURL(file);
   audio.addEventListener('loadedmetadata', () => {
@@ -370,15 +587,11 @@ async function uploadTrackSong(input, trackId) {
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = Math.floor(durationSeconds % 60);
     const durationFormatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    
-    // Preenche o campo de duração
     if (durationInput && !durationInput.value) {
       durationInput.value = durationFormatted;
     }
-    
     URL.revokeObjectURL(audio.src);
   });
-  // ----------------------------------------
 
   statusEl.textContent = '⏳ Enviando...';
   statusEl.style.color = 'var(--color-primary-hover)';
@@ -410,28 +623,31 @@ function removeTrackRow(id) {
 async function loadPlaylists() {
   const res = await fetch(apiUrl('/api/playlists'));
   const playlists = await res.json();
-  
+
   const tbody = document.getElementById('list-playlists');
   tbody.innerHTML = '';
-  
+
   if (playlists.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" class="empty-state-text">Nenhuma playlist cadastrada</td></tr>';
     return;
   }
-  
+
   playlists.forEach(playlist => {
     const img = playlist.imageUrl || 'https://images.unsplash.com/photo-1487180142328-0c4e37023af5?w=100&fit=crop';
     const ownerName = playlist.ownerId ? playlist.ownerId.name : 'N/A';
     const followersCount = playlist.followerIds ? playlist.followerIds.length : 0;
-    
+
     tbody.innerHTML += `
       <tr>
-        <td><img src="${img}" class="table-img square" alt="${playlist.name}"></td>
+        <td><img src="${publicUrl(img)}" class="table-img square" alt="${playlist.name}"></td>
         <td><strong>${playlist.name}</strong></td>
         <td>${ownerName}</td>
         <td>${playlist.tracks.length} músicas</td>
         <td>${followersCount} seguidores</td>
-        <td>
+        <td class="actions-cell">
+          <button class="btn-edit" onclick="editPlaylist('${playlist._id}')">
+            <i data-lucide="pencil"></i>
+          </button>
           <button class="btn-danger" onclick="deleteItem('playlists', '${playlist._id}')">
             <i data-lucide="trash-2"></i>
           </button>
@@ -439,12 +655,85 @@ async function loadPlaylists() {
       </tr>
     `;
   });
+
+  // guarda para poder editar depois
+  window._cachedPlaylists = playlists;
+}
+
+function editPlaylist(id) {
+  const playlist = (window._cachedPlaylists || []).find(p => p._id === id);
+  if (!playlist) return;
+
+  document.getElementById('playlist-name').value = playlist.name || '';
+  document.getElementById('playlist-description').value = playlist.description || '';
+  document.getElementById('playlist-image').value = publicUrl(playlist.imageUrl) || '';
+
+  // Dono
+  const ownerSelect = document.getElementById('playlist-owner');
+  if (ownerSelect) {
+    ownerSelect.value = playlist.ownerId ? (playlist.ownerId._id || playlist.ownerId) : '';
+  }
+
+  // Seguidores
+  const followerIds = (playlist.followerIds || []).map(f => String(f._id || f));
+  document.querySelectorAll('input[name="playlist-follower-checkbox"]').forEach(cb => {
+    cb.checked = followerIds.includes(cb.value);
+  });
+
+  // Tracks
+  const container = document.getElementById('playlist-tracks-container');
+  container.innerHTML = '';
+  playlistTrackCount = 0;
+
+  if (playlist.tracks && playlist.tracks.length > 0) {
+    playlist.tracks.forEach(track => {
+      playlistTrackCount++;
+      const rowId = playlistTrackCount;
+      const row = document.createElement('div');
+      row.className = 'track-row playlist-track';
+      row.id = `playlist-track-row-${rowId}`;
+
+      let albumsOptions = cachedAlbums.map(a =>
+        `<option value="${a._id}" ${String(a._id) === String(track.albumId?._id || track.albumId) ? 'selected' : ''}>${a.name}</option>`
+      ).join('');
+      if (albumsOptions === '') albumsOptions = '<option value="">Cadastre álbuns antes</option>';
+
+      // Opções de faixas do álbum selecionado
+      const albumId = track.albumId?._id || track.albumId;
+      const album = cachedAlbums.find(a => String(a._id) === String(albumId));
+      let tracksOptions = '<option value="">Selecione a música...</option>';
+      if (album && album.tracks) {
+        tracksOptions = album.tracks.map(t =>
+          `<option value="${t._id}" ${String(t._id) === String(track.songId?._id || track.songId) ? 'selected' : ''}>${t.title}</option>`
+        ).join('');
+      }
+
+      row.innerHTML = `
+        <select class="playlist-track-album" onchange="loadPlaylistTrackSongs(${rowId})" required>
+          <option value="">Selecione o álbum...</option>
+          ${albumsOptions}
+        </select>
+        <select class="playlist-track-song" required>
+          ${tracksOptions}
+        </select>
+        <input type="number" class="playlist-track-order" placeholder="Ordem (ex: 1)" value="${track.order || rowId}" required>
+        <button type="button" class="btn-danger btn-sm" onclick="removePlaylistTrackRow(${rowId})"><i data-lucide="x"></i></button>
+      `;
+      container.appendChild(row);
+    });
+  } else {
+    addPlaylistTrackRow();
+  }
+
+  enterEditMode('playlists', id);
+  document.getElementById('form-playlists').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  lucide.createIcons();
 }
 
 async function loadUsers() {
   const res = await fetch(apiUrl('/api/users'));
   cachedUsers = await res.json();
-  
+
   // Popula seletor do dono da playlist
   const ownerSelect = document.getElementById('playlist-owner');
   if (ownerSelect) {
@@ -453,7 +742,7 @@ async function loadUsers() {
       ownerSelect.innerHTML += `<option value="${user._id}">${user.name}</option>`;
     });
   }
-  
+
   // Popula lista de seguidores da playlist
   const followersList = document.getElementById('playlist-followers-list');
   if (followersList) {
@@ -473,21 +762,24 @@ async function loadUsers() {
   const tbody = document.getElementById('list-users');
   if (!tbody) return;
   tbody.innerHTML = '';
-  
+
   if (cachedUsers.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" class="empty-state-text">Nenhum usuário cadastrado</td></tr>';
     return;
   }
-  
+
   cachedUsers.forEach(user => {
     const img = user.profilePictureUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop';
     tbody.innerHTML += `
       <tr>
-        <td><img src="${img}" class="table-img" alt="${user.name}"></td>
+        <td><img src="${publicUrl(img)}" class="table-img" alt="${user.name}"></td>
         <td><strong>${user.name}</strong></td>
         <td>${user.email || '<span class="empty-state-text">Não informado</span>'}</td>
         <td>${user.description || '<span class="empty-state-text">Sem bio</span>'}</td>
-        <td>
+        <td class="actions-cell">
+          <button class="btn-edit" onclick="editUser('${user._id}')">
+            <i data-lucide="pencil"></i>
+          </button>
           <button class="btn-danger" onclick="deleteItem('users', '${user._id}')">
             <i data-lucide="trash-2"></i>
           </button>
@@ -495,6 +787,19 @@ async function loadUsers() {
       </tr>
     `;
   });
+}
+
+function editUser(id) {
+  const user = cachedUsers.find(u => u._id === id);
+  if (!user) return;
+  document.getElementById('user-name').value = user.name || '';
+  document.getElementById('user-email').value = user.email || '';
+  document.getElementById('user-password').value = '';  // por segurança, não preenche a senha
+  document.getElementById('user-picture').value = publicUrl(user.profilePictureUrl) || '';
+  document.getElementById('user-bg').value = publicUrl(user.backgroundImageUrl) || '';
+  document.getElementById('user-description').value = user.description || '';
+  enterEditMode('users', id);
+  document.getElementById('form-users').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // Construtor de faixas na Playlist
@@ -510,16 +815,14 @@ function resetPlaylistTracksBuilder() {
 function addPlaylistTrackRow() {
   const container = document.getElementById('playlist-tracks-container');
   playlistTrackCount++;
-  
+
   const row = document.createElement('div');
   row.className = 'track-row playlist-track';
   row.id = `playlist-track-row-${playlistTrackCount}`;
-  
+
   let albumsOptions = cachedAlbums.map(a => `<option value="${a._id}">${a.name}</option>`).join('');
-  if (albumsOptions === '') {
-    albumsOptions = '<option value="">Cadastre álbuns antes</option>';
-  }
-  
+  if (albumsOptions === '') albumsOptions = '<option value="">Cadastre álbuns antes</option>';
+
   row.innerHTML = `
     <select class="playlist-track-album" onchange="loadPlaylistTrackSongs(${playlistTrackCount})" required>
       <option value="">Selecione o álbum...</option>
@@ -543,18 +846,16 @@ function removePlaylistTrackRow(id) {
 function loadPlaylistTrackSongs(rowId) {
   const row = document.getElementById(`playlist-track-row-${rowId}`);
   if (!row) return;
-  
+
   const albumSelect = row.querySelector('.playlist-track-album');
   const songSelect = row.querySelector('.playlist-track-song');
-  
   const albumId = albumSelect.value;
   songSelect.innerHTML = '<option value="">Selecione a música...</option>';
-  
   if (!albumId) return;
-  
+
   const album = cachedAlbums.find(a => a._id === albumId);
   if (!album || !album.tracks) return;
-  
+
   album.tracks.forEach(track => {
     songSelect.innerHTML += `<option value="${track._id}">${track.title}</option>`;
   });
@@ -567,13 +868,16 @@ function loadPlaylistTrackSongs(rowId) {
 async function handleFormSubmit(event, entity) {
   event.preventDefault();
   showAlert('Salvando...', 'success', 2000);
-  
+
+  const isEditing = !!editingState[entity];
+  const editId = editingState[entity];
+
   let payload = {};
-  
+
   try {
     if (entity === 'genres') {
       payload = { name: document.getElementById('genre-name').value };
-    } 
+    }
     else if (entity === 'artists') {
       payload = {
         name: document.getElementById('artist-name').value,
@@ -581,14 +885,11 @@ async function handleFormSubmit(event, entity) {
         imageUrl: document.getElementById('artist-image').value || null,
         backgroundImageUrl: document.getElementById('artist-bg-image').value || null
       };
-    } 
+    }
     else if (entity === 'bands') {
       const selectedMembers = [];
       document.querySelectorAll('input[name="band-member-checkbox"]:checked').forEach(cb => {
-        selectedMembers.push({
-          artistId: cb.value,
-          name: cb.getAttribute('data-name')
-        });
+        selectedMembers.push({ artistId: cb.value, name: cb.getAttribute('data-name') });
       });
       payload = {
         name: document.getElementById('band-name').value,
@@ -597,11 +898,10 @@ async function handleFormSubmit(event, entity) {
         backgroundImageUrl: document.getElementById('band-bg-image').value || null,
         members: selectedMembers
       };
-    } 
+    }
     else if (entity === 'albums') {
       const creditType = document.getElementById('album-credit-type').value;
       const creditRef = document.getElementById('album-credit-ref').value;
-      
       let creditName = '';
       if (creditType === 'artist') {
         const art = cachedArtists.find(a => a._id === creditRef);
@@ -610,56 +910,43 @@ async function handleFormSubmit(event, entity) {
         const band = cachedBands.find(b => b._id === creditRef);
         creditName = band ? band.name : '';
       }
-      
-      // Constrói array de tracks (com songPath do bucket local)
+
       const tracks = [];
       const trackRows = document.querySelectorAll('#tracks-builder-container .track-row');
       trackRows.forEach((row, index) => {
         const title = row.querySelector('.track-title').value;
-        const duration = row.querySelector('.track-duration').value || null;
+        const durationVal = row.querySelector('.track-duration').value || null;
         const genreId = row.querySelector('.track-genre').value;
         const songPathInput = row.querySelector('.track-song-path');
         const songPath = songPathInput ? songPathInput.value || null : null;
-
-        tracks.push({
-          title,
-          duration,
-          genreId,
-          songPath,
-          trackNumber: index + 1
-        });
+        tracks.push({ title, duration: durationVal, genreId, songPath, trackNumber: index + 1 });
       });
-      
+
       payload = {
         name: document.getElementById('album-name').value,
         releaseDate: document.getElementById('album-date').value || null,
         coverImageUrl: document.getElementById('album-cover').value || null,
-        credits: [{
-          type: creditType,
-          refId: creditRef,
-          name: creditName
-        }],
+        credits: [{ type: creditType, refId: creditRef, name: creditName }],
         tracks
       };
-    } 
+    }
     else if (entity === 'playlists') {
       const selectedFollowers = [];
       document.querySelectorAll('input[name="playlist-follower-checkbox"]:checked').forEach(cb => {
         selectedFollowers.push(cb.value);
       });
-      
+
       const tracks = [];
       const trackRows = document.querySelectorAll('#playlist-tracks-container .track-row');
       trackRows.forEach(row => {
         const songId = row.querySelector('.playlist-track-song').value;
         const albumId = row.querySelector('.playlist-track-album').value;
         const order = parseInt(row.querySelector('.playlist-track-order').value) || 0;
-        
         if (songId && albumId) {
           tracks.push({ songId, albumId, order });
         }
       });
-      
+
       payload = {
         name: document.getElementById('playlist-name').value,
         description: document.getElementById('playlist-description').value || null,
@@ -668,39 +955,45 @@ async function handleFormSubmit(event, entity) {
         followerIds: selectedFollowers,
         tracks
       };
-    } 
+    }
     else if (entity === 'users') {
       payload = {
         name: document.getElementById('user-name').value,
         email: document.getElementById('user-email').value || null,
-        passwordHash: document.getElementById('user-password').value, // Envia senha plana como hash para simplificar
         profilePictureUrl: document.getElementById('user-picture').value || null,
         backgroundImageUrl: document.getElementById('user-bg').value || null,
         description: document.getElementById('user-description').value || null
       };
+      // Só inclui a senha se o campo foi preenchido (edição pode não alterar a senha)
+      const pw = document.getElementById('user-password').value;
+      if (pw) payload.passwordHash = pw;
     }
-    
-    // Faz a chamada POST
-    const response = await fetch(apiUrl(`/api/${entity}`), {
-      method: 'POST',
+
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing ? apiUrl(`/api/${entity}/${editId}`) : apiUrl(`/api/${entity}`);
+
+    const response = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    
+
     if (!response.ok) {
       const err = await response.json();
       throw new Error(err.message || 'Falha ao salvar dados.');
     }
-    
-    // Sucesso!
-    showAlert('Salvo com sucesso!', 'success');
-    
-    // Limpa o formulário correspondente
-    document.getElementById(`form-${entity}`).reset();
-    
-    // Recarrega os dados
+
+    showAlert(isEditing ? 'Atualizado com sucesso!' : 'Salvo com sucesso!', 'success');
+
+    // Sai do modo de edição e reseta o form
+    if (isEditing) {
+      cancelEdit(entity);
+    } else {
+      document.getElementById(`form-${entity}`).reset();
+    }
+
     await fetchCurrentTab();
-    
+
   } catch (error) {
     console.error(error);
     showAlert(`Erro: ${error.message}`, 'error');
@@ -709,17 +1002,12 @@ async function handleFormSubmit(event, entity) {
 
 async function deleteItem(entity, id) {
   if (!confirm('Deseja realmente excluir este registro?')) return;
-  
   try {
-    const res = await fetch(apiUrl(`/api/${entity}/${id}`), {
-      method: 'DELETE'
-    });
-    
+    const res = await fetch(apiUrl(`/api/${entity}/${id}`), { method: 'DELETE' });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.message || 'Falha ao deletar.');
     }
-    
     showAlert('Removido com sucesso!', 'success');
     await fetchCurrentTab();
   } catch (error) {
@@ -732,11 +1020,6 @@ async function deleteItem(entity, id) {
 // UPLOAD HELPER — Imagens (uploadAndFill)
 // ==========================================
 
-/**
- * Faz upload de um arquivo de imagem e preenche o input de URL correspondente.
- * @param {HTMLInputElement} input - O input de arquivo que disparou o evento
- * @param {string} targetId - O id do input de URL que deve ser preenchido com a URL resultante
- */
 async function uploadAndFill(input, targetId) {
   if (!input.files || input.files.length === 0) return;
 
@@ -755,10 +1038,7 @@ async function uploadAndFill(input, targetId) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const res = await fetch(apiUrl('/api/upload'), {
-      method: 'POST',
-      body: formData
-    });
+    const res = await fetch(apiUrl('/api/upload'), { method: 'POST', body: formData });
 
     if (!res.ok) {
       const err = await res.json();
@@ -766,8 +1046,6 @@ async function uploadAndFill(input, targetId) {
     }
 
     const data = await res.json();
-
-    // Preenche o campo URL com o caminho retornado pelo bucket
     if (urlInput) urlInput.value = publicUrl(data.url);
 
     if (statusEl) {
@@ -782,7 +1060,6 @@ async function uploadAndFill(input, targetId) {
     }
   } finally {
     if (label) label.classList.remove('uploading');
-    // Reseta o input de arquivo para permitir re-envio do mesmo arquivo
     input.value = '';
   }
 }
@@ -793,7 +1070,7 @@ function showAlert(message, type = 'success', duration = 4000) {
   alertBox.innerText = message;
   alertBox.className = `alert-box ${type}`;
   alertBox.classList.remove('hidden');
-  
+
   if (duration > 0) {
     setTimeout(() => {
       alertBox.classList.add('hidden');

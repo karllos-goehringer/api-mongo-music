@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spotlike Admin — Inserção de Dados</title>
+  <title>Spotlike Admin — Gestão de Dados</title>
   <link rel="stylesheet" href="style.css">
   <!-- Google Fonts: Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,6 +82,7 @@
                   <input type="text" id="genre-name" placeholder="Ex: Rock, Pop, Jazz..." required>
                 </div>
                 <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Gênero</button>
+                <button type="button" id="cancel-edit-genres" class="btn btn-cancel hidden" onclick="cancelEdit('genres')"><i data-lucide="x-circle"></i> Cancelar Edição</button>
               </form>
             </div>
             <!-- List Card -->
@@ -122,7 +123,7 @@
                 <div class="form-group">
                   <label for="artist-image">Imagem do Perfil</label>
                   <div class="upload-group">
-                    <input type="url" id="artist-image" placeholder="https://exemplo.com/perfil.jpg">
+                    <input type="text" id="artist-image" placeholder="https://exemplo.com/perfil.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'artist-image')">
@@ -133,7 +134,7 @@
                 <div class="form-group">
                   <label for="artist-bg-image">Imagem de Fundo</label>
                   <div class="upload-group">
-                    <input type="url" id="artist-bg-image" placeholder="https://exemplo.com/background.jpg">
+                    <input type="text" id="artist-bg-image" placeholder="https://exemplo.com/background.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'artist-bg-image')">
@@ -142,6 +143,7 @@
                   <span class="upload-status" id="status-artist-bg-image"></span>
                 </div>
                 <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Artista</button>
+                <button type="button" id="cancel-edit-artists" class="btn btn-cancel hidden" onclick="cancelEdit('artists')"><i data-lucide="x-circle"></i> Cancelar Edição</button>
               </form>
             </div>
             <div class="card glass">
@@ -182,7 +184,7 @@
                 <div class="form-group">
                   <label for="band-image">Imagem da Banda</label>
                   <div class="upload-group">
-                    <input type="url" id="band-image" placeholder="https://exemplo.com/banda.jpg">
+                    <input type="text" id="band-image" placeholder="https://exemplo.com/banda.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'band-image')">
@@ -193,7 +195,7 @@
                 <div class="form-group">
                   <label for="band-bg-image">Imagem de Fundo da Banda</label>
                   <div class="upload-group">
-                    <input type="url" id="band-bg-image" placeholder="https://exemplo.com/banda-bg.jpg">
+                    <input type="text" id="band-bg-image" placeholder="https://exemplo.com/banda-bg.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'band-bg-image')">
@@ -211,6 +213,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Banda</button>
+                <button type="button" id="cancel-edit-bands" class="btn btn-cancel hidden" onclick="cancelEdit('bands')"><i data-lucide="x-circle"></i> Cancelar Edição</button>
               </form>
             </div>
             <div class="card glass">
@@ -254,7 +257,7 @@
                 <div class="form-group">
                   <label for="album-cover">Imagem de Capa do Álbum</label>
                   <div class="upload-group">
-                    <input type="url" id="album-cover" placeholder="https://exemplo.com/capa.jpg">
+                    <input type="text" id="album-cover" placeholder="https://exemplo.com/capa.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'album-cover')">
@@ -289,6 +292,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Álbum completo</button>
+                <button type="button" id="cancel-edit-albums" class="btn btn-cancel hidden" onclick="cancelEdit('albums')"><i data-lucide="x-circle"></i> Cancelar Edição</button>
               </form>
             </div>
 
@@ -333,7 +337,7 @@
                 <div class="form-group">
                   <label for="playlist-image">Imagem de Capa da Playlist</label>
                   <div class="upload-group">
-                    <input type="url" id="playlist-image" placeholder="https://exemplo.com/playlist.jpg">
+                    <input type="text" id="playlist-image" placeholder="https://exemplo.com/playlist.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'playlist-image')">
@@ -372,6 +376,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Playlist</button>
+                <button type="button" id="cancel-edit-playlists" class="btn btn-cancel hidden" onclick="cancelEdit('playlists')"><i data-lucide="x-circle"></i> Cancelar Edição</button>
               </form>
             </div>
             <div class="card glass">
@@ -418,7 +423,7 @@
                 <div class="form-group">
                   <label for="user-picture">Foto de Perfil</label>
                   <div class="upload-group">
-                    <input type="url" id="user-picture" placeholder="https://exemplo.com/foto.jpg">
+                    <input type="text" id="user-picture" placeholder="https://exemplo.com/foto.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'user-picture')">
@@ -429,7 +434,7 @@
                 <div class="form-group">
                   <label for="user-bg">Foto de Capa</label>
                   <div class="upload-group">
-                    <input type="url" id="user-bg" placeholder="https://exemplo.com/capa-perfil.jpg">
+                    <input type="text" id="user-bg" placeholder="https://exemplo.com/capa-perfil.jpg">
                     <label class="btn-upload" title="Fazer upload de arquivo">
                       <i data-lucide="upload"></i>
                       <input type="file" accept="image/*" onchange="uploadAndFill(this, 'user-bg')">
@@ -442,6 +447,7 @@
                   <textarea id="user-description" rows="2" placeholder="Sobre mim..."></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Salvar Usuário</button>
+                <button type="button" id="cancel-edit-users" class="btn btn-cancel hidden" onclick="cancelEdit('users')"><i data-lucide="x-circle"></i> Cancelar Edição</button>
               </form>
             </div>
             <div class="card glass">

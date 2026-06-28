@@ -8,5 +8,5 @@ router.get('/top-playlists', (req, res) => controller.getTopPlaylistsByTrackCoun
 router.get('/genre-songs', (req, res) => controller.getGenreSongCounts(req, res));
 router.get('/band-credits', (req, res) => controller.getBandsWithAlbumCredits(req, res));
 router.get('/user-playlist-stats', (req, res) => controller.getUserPlaylistStats(req, res));
-
+router.get('/genre-albums', (req, res)=>controller.getAlbumsByGenre(req, res));
 export default router;

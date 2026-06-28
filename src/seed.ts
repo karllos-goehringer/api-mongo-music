@@ -80,6 +80,7 @@ async function runSeed() {
     }
     console.log('Banco de dados limpo!');
 
+    // --- Gêneros ---
     const genres = [
       { name: 'Thrash Metal' },
       { name: 'Heavy Metal' },
@@ -88,6 +89,11 @@ async function runSeed() {
     ];
     const createdGenres = await Genre.insertMany(genres);
     console.log('Gêneros criados!');
+
+    // --- Coleta de Artistas, Bandas e Álbuns ---
+    const artistsToInsert: any[] = [];
+    const bandsToInsert: any[] = [];
+    const albumsToInsert: any[] = [];
 
     const entities = fs.readdirSync(SEED_DIR);
 
@@ -118,28 +124,29 @@ async function runSeed() {
         }
       }
 
-      let entityId = null;
+      // Pré-gera o _id para referenciar nos álbuns sem precisar aguardar o insert
+      const entityId = new ObjectId();
       const creditType = config.type;
 
       if (creditType === 'artist') {
-        const artist = await Artist.create({
+        artistsToInsert.push({
+          _id: entityId,
           name: config.name,
           description: `Artista: ${config.name}`,
           imageUrl: perfilUrl,
           backgroundImageUrl: fundoUrl
         });
-        entityId = artist._id;
-        console.log(`Artista ${config.name} salvo!`);
+        console.log(`  Artista ${config.name} preparado.`);
       } else {
-        const band = await Band.create({
+        bandsToInsert.push({
+          _id: entityId,
           name: config.name,
           description: `Banda: ${config.name}`,
           imageUrl: perfilUrl,
           backgroundImageUrl: fundoUrl,
           members: []
         });
-        entityId = band._id;
-        console.log(`Banda ${config.name} salva!`);
+        console.log(`  Banda ${config.name} preparada.`);
       }
 
       // Processar Álbuns
@@ -149,19 +156,22 @@ async function runSeed() {
           console.log(`  Processando Álbum: ${folder}`);
           const albumFiles = fs.readdirSync(albumPath);
           let capaUrl = null;
-          const tracks = [];
-
+          const tracks: any[] = [];
           let trackNumber = 1;
+
           for (const file of albumFiles) {
             const filePath = path.join(albumPath, file);
             if (file.startsWith('capa')) {
               capaUrl = await uploadFileToGridFS(bucket, filePath, file);
             } else if (file.endsWith('.mp3')) {
               const songUrl = await uploadFileToGridFS(bucket, filePath, file);
-              const trackTitle = file.replace(/_Remastered\.mp3$/, '').replace(/\.mp3$/, '').replace(/_/g, ' ');
-              
+              const trackTitle = file
+                .replace(/_Remastered\.mp3$/, '')
+                .replace(/\.mp3$/, '')
+                .replace(/_/g, ' ');
+
               const genreObj = createdGenres.find(g => g.name === config.genre);
-              
+
               tracks.push({
                 _id: new ObjectId(),
                 title: trackTitle,
@@ -172,9 +182,8 @@ async function runSeed() {
             }
           }
 
-          const albumNameFormatted = formatAlbumName(folder);
-          await Album.create({
-            name: albumNameFormatted,
+          albumsToInsert.push({
+            name: formatAlbumName(folder),
             releaseDate: new Date(),
             coverImageUrl: capaUrl,
             credits: [{
@@ -182,12 +191,59 @@ async function runSeed() {
               refId: entityId,
               name: config.name
             }],
-            tracks: tracks
+            tracks
           });
-          console.log(`  Álbum ${albumNameFormatted} salvo com ${tracks.length} músicas!`);
+          console.log(`  Álbum ${formatAlbumName(folder)} preparado com ${tracks.length} músicas.`);
         }
       }
     }
+
+    // --- insertMany em lote ---
+    if (artistsToInsert.length > 0) {
+      await Artist.insertMany(artistsToInsert);
+      console.log(`\n${artistsToInsert.length} artista(s) inserido(s)!`);
+    }
+
+    if (bandsToInsert.length > 0) {
+      await Band.insertMany(bandsToInsert);
+      console.log(`${bandsToInsert.length} banda(s) inserida(s)!`);
+    }
+
+    if (albumsToInsert.length > 0) {
+      await Album.insertMany(albumsToInsert);
+      console.log(`${albumsToInsert.length} álbum(ns) inserido(s)!`);
+    }
+
+    // --- Usuários ---
+    const nomesUsuarios = ['Ana', 'Bruno', 'Carlos', 'Willian', 'Daniel', 'Fernanda', 'Julia', 'Larissa', 'Lucas', 'Matheus', 'Rafael', 'Thiago', 'William', 'Yasmin'];
+    const titulosPlaylists = ['Rockon', 'Musicao', 'Kpop da galera', 'melhores do robério e seus teclados', 'saudadeds motley crue'];
+    const descricoesPlaylists = ['Playlist maneira pra escutar na estrada', 'Melhores do meu gosto', 'Sorteio de palavras', 'Banidas do Xampp', 'Melhores do Playboy do Boné'];
+
+    const usuariosToInsert = Array.from({ length: 30 }, (_, i) => {
+      const nome = nomesUsuarios[Math.floor(Math.random() * nomesUsuarios.length)] + ' ' + Math.floor(Math.random() * 1000);
+      return {
+        name: nome,
+        email: `user${i}@example.com`,
+        passwordHash: 'hashedpassword123',
+        description: `Descrição do usuário ${nome}`
+      };
+    });
+    const createdUsers = await User.insertMany(usuariosToInsert);
+    console.log(`${createdUsers.length} usuários criados!`);
+
+    // --- Playlists ---
+    const playlistsToInsert = Array.from({ length: 5 }, (_, i) => {
+      const owner = createdUsers[Math.floor(Math.random() * createdUsers.length)];
+      return {
+        name: titulosPlaylists[i % titulosPlaylists.length],
+        description: descricoesPlaylists[i % descricoesPlaylists.length],
+        ownerId: owner._id,
+        followerIds: [],
+        tracks: []
+      };
+    });
+    const createdPlaylists = await Playlist.insertMany(playlistsToInsert);
+    console.log(`${createdPlaylists.length} playlists criadas!`);
 
     console.log('\n--- Seed concluído com sucesso! ---');
     process.exit(0);

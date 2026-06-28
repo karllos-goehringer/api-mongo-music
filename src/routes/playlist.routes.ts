@@ -5,6 +5,7 @@ const router = Router();
 const controller = new PlaylistController();
 
 router.post('/', (req, res) => controller.create(req, res));
+router.post('/many', (req, res) => controller.createMany(req, res));
 router.get('/', (req, res) => controller.findAll(req, res));
 router.get('/:id', (req, res) => controller.findById(req, res));
 router.put('/:id', (req, res) => controller.update(req, res));

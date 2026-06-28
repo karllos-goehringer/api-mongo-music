@@ -154,7 +154,67 @@ export class PipelineController {
       return res.status(500).json({ message: 'Erro interno ao executar pipeline de bandas.' });
     }
   }
+  public async getAlbumsByGenre(_req: Request, res: Response): Promise<Response> {
+    try{
+      const pipeline: PipelineStage[] = [
+        { $match: { members: { $exists: true, $ne: [] } } },
+        { $unwind: '$members' },
+        {
+          $group: {
+            _id: '$_id',
+            name: { $first: '$name' },
+            members: { $push: '$members' },
+            totalMembers: { $sum: 1 }
+          }
+        },
+        {
+          $lookup: {
+            from: 'albums',
+            let: { bandId: '$_id' },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: ['$$bandId', '$credits.refId']
+                  }
+                }
+              },
+              { $count: 'albumCount' }
+            ],
+            as: 'albumsCredited'
+          }
+        },
+        {
+          $addFields: {
+            albumCreditCount: {
+              $cond: [
+                { $gt: [{ $size: '$albumsCredited' }, 0] },
+                { $arrayElemAt: ['$albumsCredited.albumCount', 0] },
+                0
+              ]
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            bandId: '$_id',
+            name: 1,
+            totalMembers: 1,
+            albumCreditCount: 1
+          }
+        },
+        { $sort: { albumCreditCount: -1 , totalMembers: -1  } },
+        { $limit: 10 }
+      ];
 
+      const result = await Band.aggregate(pipeline);
+      return res.status(200).json(result);
+    }catch(error){
+      console.error(error);
+      return res.status(500).json({ message: 'Erro interno ao executar pipeline de bandas.' });
+    }
+  }
   public async getUserPlaylistStats(_req: Request, res: Response): Promise<Response> {
     try {
       const pipeline: PipelineStage[] = [
@@ -203,4 +263,5 @@ export class PipelineController {
       return res.status(500).json({ message: 'Erro interno ao executar pipeline de usuários.' });
     }
   }
+  
 }

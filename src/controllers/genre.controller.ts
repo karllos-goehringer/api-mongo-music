@@ -12,6 +12,20 @@ export class GenreController {
     }
   }
 
+  
+  public async createMany(req: Request, res: Response): Promise<Response> {
+    try {
+      const items = req.body;
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ message: 'O corpo da requisição deve ser um array.' });
+      }
+      const saved = await Genre.insertMany(items);
+      return res.status(201).json(saved);
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message || 'Erro ao criar registros em lote.' });
+    }
+  }
+
   public async findAll(_req: Request, res: Response): Promise<Response> {
     try {
       const list = await Genre.find();

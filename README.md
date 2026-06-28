@@ -16,7 +16,7 @@ https://api-mongo-music.onrender.com/
 
 > **Observação**
 >
-> A instância hospedada utiliza o **MongoDB Atlas Free Tier**, que possui limite de aproximadamente **520 MB** de armazenamento. Por esse motivo, a quantidade de arquivos disponíveis na versão online é reduzida.
+> A instância hospedada utiliza o **MongoDB Atlas Free Tier**, que possui limite de aproximadamente **520 MB** de armazenamento. Por esse motivo, a quantidade de arquivos disponíveis na versão online é reduzida. Na local você pode colocar o quanto quiser.
 
 ---
 
@@ -235,4 +235,30 @@ src/
 ├── app.ts
 ├── seed.ts
 └── server
+```
+# Embbeds x References
+```text
+Temos os seguintes embbeds no projeto:
+
+- album
+  - tracks
+    - Foi implementado junto ao álbum para facilitar na exibição, já que sempre que exibir uma música no front ele já usa a imagem, nome e outras coisas do álbum.
+
+E os seguintes References:
+
+- albums
+  - credits
+    - Deixado apenas a referência do artista/banda referenciado com o tipo (se é banda ou solo), ID (referência) e nome (para não precisar buscar no outro objeto). Deixado como referência para ter o dado rápido, mas ter a possibilidade de buscar os dados completos através do álbum.
+
+- bands
+  - members
+    - Deixado como referência para rápido acesso aos membros da banda que têm carreira solo (exemplo), ID (referência) e nome.
+
+- playlists
+  - followerIds
+    - Vetor com referência para os usuários que seguem essa playlist.
+
+- playlists
+  - tracks
+    - Contém duas referências, uma para álbum e outra para música, para acesso rápido através de nova chamada.
 ```
